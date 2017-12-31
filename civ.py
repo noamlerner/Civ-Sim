@@ -15,46 +15,54 @@ class civs():
         self._faith = 7
         self._fight_ability = 8
         self.num_civs = 1
-        self._attributes = np.zeros((self._num_attributes,N))
+        self._attributes = np.zeros((N*N,self._num_attributes))
+        self._affinities = np.zeros((N*N, N*N))
+
     def stats(self):
         stats = {}
         for i in range(self.num_civs):
             stats[i] = {}
-            stats[i]['Same Marry'] = self._attributes[self._same_marry][i]
-            stats[i]['Same Kill'] = self._attributes[self._same_kill][i]
-            stats[i]['Same Leave Alone'] = self._attributes[self._same_leave_alone][i]
-            stats[i]['Other Convert'] = self._attributes[self._other_convert][i]
-            stats[i]['Other Kill'] = self._attributes[self._other_kill][i]
-            stats[i]['Other Marry'] = self._attributes[self._other_marry][i]
-            stats[i]['Other Leave Alone'] = self._attributes[self.other_leave_alone][i]
-            stats[i]['Faith'] = self._attributes[self._faith][i]
-            stats[i]['Fight Ability'] = self._attributes[self._fight_ability][i]
+            stats[i]['Same Marry'] = self._attributes[i][self._same_marry]
+            stats[i]['Same Kill'] = self._attributes[i][self._same_kill]
+            stats[i]['Same Leave Alone'] = self._attributes[i][self._same_leave_alone]
+            stats[i]['Other Convert'] = self._attributes[i][self._other_convert]
+            stats[i]['Other Kill'] = self._attributes[i][self._other_kill]
+            stats[i]['Other Marry'] = self._attributes[i][self._other_marry]
+            stats[i]['Other Leave Alone'] = self._attributes[i][self.other_leave_alone]
+            stats[i]['Faith'] = self._attributes[i][self._faith]
+            stats[i]['Fight Ability'] = self._attributes[i][self._fight_ability]
         return stats
-
+    def still_alive(self,alive):
+        attributes = np.zeros((self.N*self.N,self._num_attributes))
+        on_civ = 0
+        for i in alive:
+            attributes[on_civ] = self._attributes[i]
+            on_civ +=1
+        self._attributes = attributes
+        self.num_civs = on_civ
     def init_rand_civs(self, num_civs = 5):
         on_civ = self.num_civs
         for i in range(num_civs):
             for j in range(self._num_attributes):
-                self._attributes[j][on_civ] = np.random.rand()
-                if j == self._fight_ability:
-                    self._attributes[j][on_civ] = np.random.rand() * 0.3 + 0.4
+                self._attributes[on_civ][j] = np.random.rand()
             on_civ+=1
         self.num_civs = on_civ
 
     def _empty_spot(self,world, c1,c2):
-        empty = self._empty_neighbors(world,c1[0],c1[1])
-        if len(empty) != 0:
-            i = np.random.randint(len(empty))
-            return (empty[0][i], empty[1][i])
-        empty = self._empty_neighbors(world,c2[0],c2[1])
-        if len(empty) != 0:
-            i = np.random.randint(len(empty))
-            return (empty[0][i], empty[1][i])
-        return None
+        empty_neighbor = self._empty_neighbor(world,c1[0],c1[1])
+        if empty_neighbor != None:
+            return empty_neighbor
+        return self._empty_neighbor(world,c2[0],c2[1])
 
-    def _empty_neighbors(self,world,x,y):
+    def _empty_neighbor(self,world,x,y):
         search_area = world[x-1:x+2,y-1:y+2]
-        return np.where(search_area == 0)
+        basex = x-1
+        basey = y-1
+        w = np.where(search_area == 0)
+        if len(w[0]) == 0:
+            return None
+        i = np.random.randint(len(w[0]))
+        return (basex + w[0][i], basey + w[1][i])
 
     def interact(self, world, c1, c2):
         if world[c1[0]][c1[1]] == world[c2[0]][c2[1]]:
@@ -64,12 +72,13 @@ class civs():
 
     def _same_marry_them_up(self,civ):
         seduction = 0
-        seduction += self._attributes[self._same_marry][civ] * np.random.rand()
-        seduction += self._attributes[self._same_marry][civ] * np.random.rand()
+        seduction += self._attributes[civ][self._same_marry] * np.random.rand()
+        seduction += self._attributes[civ][self._same_marry] * np.random.rand()
         return seduction >= 0.35
+
     def _same_interact(self,world, c1, c2):
         civ = world[c1[0]][c1[1]]
-        action = np.argmax(self._attributes[civ][:self._same_attributes])
+        action = self._take_action(self._attributes[civ][:self._same_attributes])
         if action == self._same_marry:
             if not self._same_marry_them_up(civ):
                 return
@@ -89,13 +98,13 @@ class civs():
     def _baby_civ(self, civ1, civ2):
         for i in range(self._num_attributes):
             weight = np.random.rand()
-            self._attributes[i][self.num_civs] = self._attributes[civ1][i] * weight + self._attributes[civ2][i] * (1 - weight)
+            self._attributes[self.num_civs][i] = self._attributes[civ1][i] * weight + self._attributes[civ2][i] * (1 - weight)
         self.num_civs += 1
         return self.num_civs - 1
 
     def _fight(self, civ1, civ2):
-        a1 = self._attributes[self._fight_ability][civ1] * np.random.rand()
-        a2 = self._attributes[self._fight_ability][civ2] * np.random.rand()
+        a1 = self._attributes[civ1][self._fight_ability] * np.random.rand()
+        a2 = self._attributes[civ2][self._fight_ability] * np.random.rand()
         return a1 > a2
 
     def _convert(self, civ1, civ2):
@@ -104,21 +113,31 @@ class civs():
         return convert > faith
 
     def _marry(self, civ1, civ2):
-        seduction1 = self._attributes[self._other_marry][civ1] * np.random.rand()
-        faith = self._attributes[self._faith][civ2] * np.random.rand()
-        return seduction1 > faith
+        seduction1 = self._attributes[civ1][self._other_marry] * np.random.rand() * np.random.rand()
+        faith1 = self._attributes[civ1][self._faith] * np.random.rand()
+        seduction2 = self._attributes[civ2][self._other_marry] * np.random.rand() * np.random.rand()
+        faith2 = self._attributes[civ2][self._faith] * np.random.rand()
+        seduction = seduction1 + seduction2
+        faith = faith1 + faith2
+        return faith < seduction
+    def _take_action(self, attributes):
+        a = []
+        for i in attributes:
+            a.append(i * np.random.rand())
+        return np.argmax(a)
 
     def other_interact(self, world, c1, c2):
         civ1 = world[c1[0]][c1[1]]
         civ2 = world[c2[0]][c2[1]]
-        attributes = self._attributes[:][civ1]
-        action = np.argmax(self._attributes[civ1][self._same_attributes:self._other_attributes]) + self._same_attributes
+        action = self._take_action(self._attributes[civ1][self._same_attributes:self._other_attributes])+ self._same_attributes
         if action == self._other_convert:
             if self._convert(civ1, civ2):
                 world[c2[0]][c2[1]] = civ1
+                return
             else:
                 # if failed to convert, can do something else.
-                action = np.argmax(self._attributes[civ1][self._same_attributes+1:self._other_attributes])
+                action = self._take_action(
+                    self._attributes[civ1][self._same_attributes+1:self._other_attributes]) + self._same_attributes + 1
         if action == self._other_kill:
             won_fight = self._fight(civ1,civ2)
             if won_fight:

@@ -13,7 +13,7 @@ def rand_populate_world(world, num_civs, num_babies, restrict_to):
     for i in range(num_babies):
         x = np.random.randint(choose) + min_
         y = np.random.randint(choose) + min_
-        civ = np.random.randint(num_civs)
+        civ = np.random.randint(1,num_civs)
         world[x][y] = civ
 
 def interact(world,x,y,interact_with,c):
@@ -57,47 +57,71 @@ def move_world(world,civ):
         succesful_move = move(world,x,y,move_to)
         if not succesful_move:
             interact(world,x,y,move_to,civ)
-def world_stats(world, i, stats_dict, c):
+
+def world_stats(world,i, c):
+    stats_dict = {}
     size = len(np.where(world != 0)[0])
     print "Civilizations for year: " + str(i)
     print "-------------------------"
-    stats_dict['civs'] = c.stats()
-    stats_dict[i] = {}
+    civs = c.stats()
+    stats_dict['civs'] = {}
     for j in range(1,c.num_civs):
         population = len(np.where(world == j)[0])
         if population == 0:
             continue
-        stats_dict[i][j] = population / size
-        print "\tCivilization " + str(j)
-        print "\t" + str(stats_dict['civs'][j])
-        print "\tPopulation: " + str(population)
-        print "\tRelaitve Population: " + str(population/size)
+        stats_dict[j] = float(population) / size
+        if float(population) / size > 0.1:
+            stats_dict['civs'][j] = civs[j]
+            print "\tCivilization " + str(j)
+            print "\t" + str(civs[j])
+            print "\tPopulation: " + str(population)
+            print "\tRelaitve Population: " + str(stats_dict[j])
     print "Averages for year: " + str(i)
     print "-------------------------"
     average_stats = {}
-    for k in stats_dict['civs'][1].keys():
-        sum = 0
-        num = 0
-        for j in stats_dict[i].keys():
-            sum += stats_dict['civs'][j][k]
-            num += 1
-        av = sum / num
+    civkeys = civs.keys()
+    if len(civkeys) == 0:
+        print "They Dont Killed Themselves"
+        return
+    print "Number of Civs: " + str(len(civkeys))
+    for k in civs[civkeys[0]].keys():
+        av = 0
+        for j in stats_dict.keys():
+            if j == 'civs': continue
+            av += civs[j][k] * stats_dict[j]
         print "\tAverage " + k + ": " + str(av)
         average_stats[k] = av
     stats_dict['averages'] = average_stats
+    return stats_dict
 
 def simulate():
     N = 1000
     c = civs(N)
     c.init_rand_civs(10)
     world = create_world(N)
-    stats = {}
     rand_populate_world(world,c.num_civs,100,0.25)
-    for i in range(10000):
+    for i in range(1000000):
+        print "Year " + str(i)
         move_world(world,c)
-        if i % 500 == 0:
-            world_stats(world,i, stats,c)
-    world_stats(world,10000, stats,c)
+        if i % 100 == 0:
+            stats = world_stats(world,i,c)
+            for i in range(c.num_civs):
+                if i in stats and stats[i] > 0.95:
+                    print "Civ " + str(i) + " won this one"
+                    stats['civs'] = stats['civs'][i]
+                    return stats
+    stats = world_stats(world,10000,c)
     return stats
 
-simulate()
+def n_simulate(N):
+    stats = []
+    for i in range(N):
+        stats.append(simulate())
+    print " Done "
+    print '----------------\n----------------\n----------------\n----------------'
+    print stats
+
+n_simulate(30)
+
+
+
