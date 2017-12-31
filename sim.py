@@ -57,6 +57,7 @@ def move_world(world,civ):
         succesful_move = move(world,x,y,move_to)
         if not succesful_move:
             interact(world,x,y,move_to,civ)
+    civ.affinity_decay()
 
 def world_stats(world,i, c):
     stats_dict = {}
@@ -73,9 +74,10 @@ def world_stats(world,i, c):
         if float(population) / size > 0.1:
             stats_dict['civs'][j] = civs[j]
             print "\tCivilization " + str(j)
-            print "\t" + str(civs[j])
-            print "\tPopulation: " + str(population)
-            print "\tRelaitve Population: " + str(stats_dict[j])
+            for k in civs[j].keys():
+                print "\t\t" + k + ":\t" + str(civs[j][k])
+            print "\t\tPopulation: " + str(population)
+            print "\t\tRelaitve Population: " + str(stats_dict[j])
     print "Averages for year: " + str(i)
     print "-------------------------"
     average_stats = {}
@@ -121,7 +123,7 @@ def n_simulate(N):
     print '----------------\n----------------\n----------------\n----------------'
     print stats
 
-n_simulate(30)
+n_simulate(1)
 
 
 
