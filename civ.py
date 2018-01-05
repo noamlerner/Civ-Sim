@@ -108,9 +108,11 @@ class civs():
         return self.num_civs - 1
 
     def _fight(self, civ1, civ2):
-        a1 = self._attributes[civ1][self._fight_ability] * np.random.rand()
-        a2 = self._attributes[civ2][self._fight_ability] * np.random.rand()
-        return a1 > a2
+        a1 = self._get_other_attributes(civ1,civ2)
+        a2 = self._get_other_attributes(civ2,civ1)
+        f1 = a1[self._fight_ability] * np.random.rand()
+        f2 = a2[self._fight_ability] * np.random.rand()
+        return f1 > f2
 
     def _convert(self, civ1, civ2):
         convert = self._attributes[civ1][self._other_convert] * np.random.rand()
@@ -118,10 +120,12 @@ class civs():
         return convert > faith
 
     def _marry(self, civ1, civ2):
-        seduction1 = self._attributes[civ1][self._other_marry] * np.random.rand() * np.random.rand()
-        faith1 = self._attributes[civ1][self._faith] * np.random.rand()
-        seduction2 = self._attributes[civ2][self._other_marry] * np.random.rand() * np.random.rand()
-        faith2 = self._attributes[civ2][self._faith] * np.random.rand()
+        a1 = self._get_other_attributes(civ1,civ2)
+        a2 = self._get_other_attributes(civ2,civ1)
+        seduction1 = a1[self._other_marry] * np.random.rand() * np.random.rand()
+        faith1 = a1[self._faith] * np.random.rand()
+        seduction2 = a2[self._other_marry] * np.random.rand() * np.random.rand()
+        faith2 = a2[self._faith] * np.random.rand()
         seduction = seduction1 + seduction2
         faith = faith1 + faith2
         return faith < seduction
@@ -133,7 +137,7 @@ class civs():
         return np.argmax(a)
     def _affinity_growth(self, civ1, civ2):
         self._affinities[civ1][civ2] -= self._attributes[civ1][self._other_hate_growth]
-        
+
     def affinity_decay(self):
         for i in range(self.num_civs):
             self._affinities[i] *= self._attributes[i][self._other_affinity_decay]
@@ -151,14 +155,14 @@ class civs():
         attributes = np.copy(self._attributes[civ1])
         attributes[self._other_kill] -= self._affinities[civ1][civ2] * np.random.rand()
         attributes[self._other_marry] += self._affinities[civ1][civ2] * np.random.rand()
-        return attributes[self._same_attributes:self._other_attributes]
+        return attributes
 
 
     def other_interact(self, world, c1, c2):
         civ1 = world[c1[0]][c1[1]]
         civ2 = world[c2[0]][c2[1]]
         attributes = self._get_other_attributes(civ1,civ2)
-        action = self._take_action(attributes) + self._same_attributes
+        action = self._take_action(attributes[self._same_attributes:self._other_attributes]) + self._same_attributes
         if action == self._other_convert:
             if self._convert(civ1, civ2):
                 world[c2[0]][c2[1]] = civ1
