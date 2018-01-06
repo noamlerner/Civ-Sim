@@ -33,8 +33,8 @@ class civs():
             stats[i]['Other Marry'] = self._attributes[i][self._other_marry]
             stats[i]['Other Leave Alone'] = self._attributes[i][self._other_leave_alone]
             stats[i]['Peace Loving'] = self._attributes[i][self._peace_loving]
-            stats[i]['Other Hate Growth'] = self._attributes[i][self._other_hate_growth]
-            stats[i]['Other Affinity Decay'] = self._attributes[i][self._other_affinity_decay]
+            stats[i]['Hate Growth'] = self._attributes[i][self._other_hate_growth]
+            stats[i]['Affinity Decay'] = self._attributes[i][self._other_affinity_decay]
             stats[i]['Faith'] = self._attributes[i][self._faith]
             stats[i]['Fight Ability'] = self._attributes[i][self._fight_ability]
         return stats
@@ -115,7 +115,7 @@ class civs():
         return f1 > f2
 
     def _convert(self, civ1, civ2):
-        convert = self._attributes[civ1][self._other_convert] * np.random.rand()
+        convert = self._attributes[civ1][self._other_convert] * np.random.rand() * (2/3)
         faith = self._attributes[civ2][self._faith] * np.random.random()
         return convert > faith
 
@@ -136,18 +136,18 @@ class civs():
             a.append(i * np.random.rand())
         return np.argmax(a)
     def _hate_growth(self, civ1, civ2):
-        self._affinities[civ1][civ2] -= self._attributes[civ1][self._other_hate_growth] * np.random.random()
+        self._affinities[civ1][civ2] -= self._attributes[civ1][self._other_hate_growth]/5 * np.random.random()
 
     def _instigated_fight(self, civ1, civ2):
-        self._affinities[:self.num_civs,civ1] -= (self._attributes[:self.num_civs, self._peace_loving] * 0.5 +
-                                                    self._affinities[:self.num_civs, civ2] * 0.2) * np.random.random()
+        self._affinities[:self.num_civs,civ1] -= (self._attributes[:self.num_civs, self._peace_loving] / 10 +
+                                                    self._affinities[:self.num_civs, civ2] / 5 ) * np.random.random()
 
     def _peaceful_interaction(self, civ1, civ2):
-        self._affinities[civ1][civ2] += self._attributes[civ1][self._peace_loving] * np.random.random()
+        self._affinities[civ1][civ2] += self._attributes[civ1][self._peace_loving]/5 * np.random.random()
 
     def affinity_decay(self):
         for i in range(self.num_civs):
-            self._affinities[i] *= self._attributes[i][self._other_affinity_decay] /3
+            self._affinities[i] *= 1 - (self._attributes[i][self._other_affinity_decay]/100)
 
     def _decide_baby_civ(self, civ1, civ2):
         baby_civ1 = self._attributes[civ1][self._faith] * np.random.rand()
@@ -192,10 +192,6 @@ class civs():
                 return
             empty_spot = self._empty_spot(world,c1,c2)
             baby_civ = self._decide_baby_civ(civ1,civ2)
-            if baby_civ != civ1:
-                self._hate_growth(civ1, civ2)
-            if baby_civ != civ2:
-                self._hate_growth(civ2, civ1)
             world[c1[0]][c1[1]] = baby_civ
             world[c2[0]][c2[1]] = baby_civ
             if empty_spot == None:

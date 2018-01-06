@@ -110,21 +110,23 @@ def world_stats(world,i, c):
 def simulate():
     N = 500
     c = civs(N)
-    c.init_rand_civs(5)
+    num_civs = int(np.random.random() * 500) + 2
+    c.init_rand_civs(num_civs)
     world = create_world(N)
-    rand_populate_world(world,c.num_civs,20,0.25)
+    rand_populate_world(world,c.num_civs, int(np.ceil(500.0/num_civs)),0.5)
     for i in range(1000000):
         move_world(world,c)
-        if i % 100 == 0:
-            print "Year " + str(i)
+        print "Year " + str(i)
+        if i % 50 == 0:
             stats = world_stats(world,i,c)
             if stats['total_population'] < 5 or i > 10000:
                 print "This world was a failure, restarting..."
                 return None
-            for i in range(c.num_civs):
-                if i in stats and stats[i] > 0.95:
-                    print "Civ " + str(i) + " won this one"
-                    return stats['civs'][i]
+            for j in range(c.num_civs):
+                if j in stats and stats[j] > 0.95:
+                    print "Civ " + str(j) + " won this one"
+                    stats['civs'][j]['year'] = i
+                    return stats['civs'][j]
     stats = world_stats(world,10000,c)
     return stats
 
@@ -137,62 +139,24 @@ def n_simulate(N):
             civ_stats.append(s)
     keys = civ_stats[0].keys()
     organized_data = np.zeros((len(keys),len(civ_stats)))
-    norm_organized_data = np.zeros((len(keys),len(civ_stats)))
 
-    av_f = open("./averages.csv",'w')
-    n_av_f = open("./normalized_averages.csv",'w')
+    av_f = open("./winning_civs.csv",'w')
     key_line = "id,"
     for k in keys:
         key_line+= k + ','
-    n_av_f.write(key_line+'\n')
     av_f.write(key_line+'\n')
 
     for i in range(len(civ_stats)):
         k_i = 0
-        vals = civ_stats[i].values()
-        av_val = np.mean(vals)
-        std_val = np.std(vals)
-        n_av_f.write(str(i) + ',')
         av_f.write(str(i) + ',')
         for k in keys:
             organized_data[k_i][i] = civ_stats[i][k]
-            norm_organized_data[k_i][i]= (civ_stats[i][k] - av_val) / std_val
-            n_av_f.write(str(norm_organized_data[k_i][i]) + ',')
             av_f.write(str(organized_data[k_i][i]) + ',')
             k_i += 1
-        n_av_f.write("\n")
         av_f.write("\n")
-    n_av_f.close()
     av_f.close()
-    averages = np.zeros(len(keys))
-    normalized_averages = np.zeros(len(keys))
     print " Done "
     print '----------------\n----------------\n----------------\n----------------'
-    for i in range(len(averages)):
-        averages[i] = np.mean(organized_data[i])
-        normalized_averages[i] = np.mean(norm_organized_data[i])
-    grid = [["Attribute", "Normalized Mean", "Mean"]]
-    for k in range(len(keys)):
-        grid.append([keys[k],normalized_averages[k], averages[k]])
-
-    print output_grid(grid)
-def output_grid(g):
-    column_lengths = np.zeros(len(g[0]))
-    lens = np.zeros((len(g[0]),len(g)))
-    for i in range(len(g)):
-        for j in range(len(g[i])):
-            lens[j][i] = len(str(g[i][j]))
-    for i in range(len(lens)):
-        column_lengths[i] = np.max(lens[i]) + 5
-    pretty = ""
-    for r in range(len(g)):
-        line = ""
-        for c in range(len(g[r])):
-            s = str(g[r][c])
-            s += " "* (column_lengths[c] - len(s))
-            line += s
-        pretty += line + "\n"
-    return pretty
 
 n_simulate(100)
 
