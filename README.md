@@ -66,7 +66,7 @@ The action is determined by multiplying a random number between 0 and 1 to each 
 the largest value. That is
 
 	max(
-    	Same Kill * random(),
+    	    Same Kill * random(),
         Same Marry * random(),
         Same Leave Alone * random(),
     )
@@ -122,7 +122,7 @@ When two people from different civilizations interact, they can choose all the s
 Which action a person takes is determined with the expression:
 
     max(
-    	Other Kill * random(),
+    	    Other Kill * random(),
         Other Marry * random(),
         Other Leave Alone * random(),
         Other Convert * random(),
