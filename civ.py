@@ -2,7 +2,7 @@ import numpy as np
 class civs():
     def __init__(self, N):
         self.N = N
-        self._num_attributes = 11
+        self._num_attributes = 12
         self._same_attributes = 3
         self._other_attributes = 7
         self._same_marry = 0
@@ -14,8 +14,9 @@ class civs():
         self._other_leave_alone = 6
         self._faith = 7
         self._other_hate_growth = 8
-        self._other_affinity_decay = 9
-        self._fight_ability = 10
+        self._peace_loving = 9
+        self._other_affinity_decay = 10
+        self._fight_ability = 11
         self.num_civs = 1
         self._attributes = np.zeros((N*N,self._num_attributes))
         self._affinities = np.zeros((N*N, N*N))
@@ -31,20 +32,13 @@ class civs():
             stats[i]['Other Kill'] = self._attributes[i][self._other_kill]
             stats[i]['Other Marry'] = self._attributes[i][self._other_marry]
             stats[i]['Other Leave Alone'] = self._attributes[i][self._other_leave_alone]
+            stats[i]['Peace Loving'] = self._attributes[i][self._peace_loving]
             stats[i]['Other Hate Growth'] = self._attributes[i][self._other_hate_growth]
             stats[i]['Other Affinity Decay'] = self._attributes[i][self._other_affinity_decay]
             stats[i]['Faith'] = self._attributes[i][self._faith]
             stats[i]['Fight Ability'] = self._attributes[i][self._fight_ability]
         return stats
 
-    def still_alive(self,alive):
-        attributes = np.zeros((self.N*self.N,self._num_attributes))
-        on_civ = 0
-        for i in alive:
-            attributes[on_civ] = self._attributes[i]
-            on_civ +=1
-        self._attributes = attributes
-        self.num_civs = on_civ
     def init_rand_civs(self, num_civs = 5):
         on_civ = self.num_civs
         for i in range(num_civs):
@@ -101,9 +95,15 @@ class civs():
             print "Should have picked a same action"
 
     def _baby_civ(self, civ1, civ2):
+        weights = np.random.rand(3)
+        sum = np.sum(weights)
+        weights = weights / sum
         for i in range(self._num_attributes):
-            weight = np.random.rand()
-            self._attributes[self.num_civs][i] = self._attributes[civ1][i] * weight + self._attributes[civ2][i] * (1 - weight) + np.random.rand()
+            self._attributes[self.num_civs][i] = self._attributes[civ1][i] * weights[0] + self._attributes[civ2][i] * weights[1] + np.random.rand() * weights[2]
+        weights = np.random.rand(2)
+        sum = np.sum(weights)
+        weights = weights / sum
+        self._affinities[self.num_civs] = self._affinities[civ1] * weights[0] + self._affinities[civ2] * weights[0]
         self.num_civs += 1
         return self.num_civs - 1
 
@@ -135,17 +135,24 @@ class civs():
         for i in attributes:
             a.append(i * np.random.rand())
         return np.argmax(a)
-    def _affinity_growth(self, civ1, civ2):
-        self._affinities[civ1][civ2] -= self._attributes[civ1][self._other_hate_growth]
+    def _hate_growth(self, civ1, civ2):
+        self._affinities[civ1][civ2] -= self._attributes[civ1][self._other_hate_growth] * np.random.random()
+
+    def _instigated_fight(self, civ1, civ2):
+        self._affinities[:self.num_civs,civ1] -= (self._attributes[:self.num_civs, self._peace_loving] * 0.5 +
+                                                    self._affinities[:self.num_civs, civ2] * 0.2) * np.random.random()
+
+    def _peaceful_interaction(self, civ1, civ2):
+        self._affinities[civ1][civ2] += self._attributes[civ1][self._peace_loving] * np.random.random()
 
     def affinity_decay(self):
         for i in range(self.num_civs):
-            self._affinities[i] *= self._attributes[i][self._other_affinity_decay]
+            self._affinities[i] *= self._attributes[i][self._other_affinity_decay] /3
 
     def _decide_baby_civ(self, civ1, civ2):
         baby_civ1 = self._attributes[civ1][self._faith] * np.random.rand()
         baby_civ2 = self._attributes[civ2][self._faith] * np.random.rand()
-        if abs(baby_civ1 - baby_civ2) < 0.3:
+        if abs(baby_civ1 - baby_civ2) < 0.25:
             return self._baby_civ(civ1,civ2)
         else:
             if baby_civ1 > baby_civ2: return civ1
@@ -173,8 +180,9 @@ class civs():
                     self._attributes[civ1][self._same_attributes+1:self._other_attributes]) + self._same_attributes + 1
         if action == self._other_kill:
             won_fight = self._fight(civ1,civ2)
-            self._affinity_growth(civ2, civ1)
-            self._affinity_growth(civ1, civ2)
+            self._hate_growth(civ2, civ1)
+            self._hate_growth(civ1, civ2)
+            self._instigated_fight(civ1,civ2)
             if won_fight:
                 world[c2[0]][c2[1]] = 0
             else:
@@ -183,15 +191,18 @@ class civs():
             if not self._marry(civ1,civ2):
                 return
             empty_spot = self._empty_spot(world,c1,c2)
-            if empty_spot == None:
-                return
             baby_civ = self._decide_baby_civ(civ1,civ2)
             if baby_civ != civ1:
-                self._affinity_growth(civ1, civ2)
+                self._hate_growth(civ1, civ2)
             if baby_civ != civ2:
-                self._affinity_growth(civ2, civ1)
+                self._hate_growth(civ2, civ1)
+            world[c1[0]][c1[1]] = baby_civ
+            world[c2[0]][c2[1]] = baby_civ
+            if empty_spot == None:
+                return
             world[empty_spot[0]][empty_spot[1]] = baby_civ
         elif action == self._other_leave_alone:
-            pass
+            self._peaceful_interaction(civ1,civ2)
+            self._peaceful_interaction(civ2,civ1)
         else:
             print "Should have picked an other action"
