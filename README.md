@@ -75,7 +75,7 @@ the largest value. That is
 If a person decides to try and marry their neighbor, they might still be unsuccessful. Seduction is calculated using the expression:
 
 	seduction = Same Marry * random() + Same Marry * random()
- Marriage occurs if seduction is above 0.35.
+ This means the average value of seduction will be 0.5 and so Marriage occurs if seduction is above 0.35.
 
  If a marriage does occur, a baby belonging to the same civilization is born and put into an empty spot next to one of the two people. If such a spot does not exist, the baby is not born.
 ##### Killing
