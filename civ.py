@@ -38,6 +38,25 @@ class civs():
             stats[i]['Faith'] = self._attributes[i][self._faith]
             stats[i]['Fight Ability'] = self._attributes[i][self._fight_ability]
         return stats
+    def prune_civs(self, world):
+        print "Currently at " + str(self.num_civs) + " Civilizations. Pruning civilizaitons"
+        N = self.N
+        on_civ = 1
+        mapping = np.zeros(N*N).astype(np.int64)
+        attributes = np.zeros((N*N,self._num_attributes))
+        affinities = np.zeros((N*N, N*N))
+        for i in range(1,self.num_civs):
+            if i in world:
+                attributes[on_civ] = self._attributes[i]
+                mapping[on_civ] = i
+                on_civ+=1
+        for i in range(on_civ):
+            for j in range(on_civ):
+                affinities[i][j] = self._affinities[mapping[i]][mapping[j]]
+            locs = np.where(world == mapping[i])
+            world[locs] = i
+        self.num_civs = on_civ
+        print "Civilizations Pruned, now at " + str(self.num_civs) + " civilizations."
 
     def init_rand_civs(self, num_civs = 5):
         on_civ = self.num_civs
@@ -152,7 +171,7 @@ class civs():
     def _decide_baby_civ(self, civ1, civ2):
         baby_civ1 = self._attributes[civ1][self._faith] * np.random.rand()
         baby_civ2 = self._attributes[civ2][self._faith] * np.random.rand()
-        if abs(baby_civ1 - baby_civ2) < 0.25:
+        if abs(baby_civ1 - baby_civ2) < 0.01:
             return self._baby_civ(civ1,civ2)
         else:
             if baby_civ1 > baby_civ2: return civ1
@@ -190,6 +209,8 @@ class civs():
         elif action == self._other_marry:
             if not self._marry(civ1,civ2):
                 return
+            if self.num_civs >= self.N * self.N * 9/10:
+                self.prune_civs(world)
             empty_spot = self._empty_spot(world,c1,c2)
             baby_civ = self._decide_baby_civ(civ1,civ2)
             world[c1[0]][c1[1]] = baby_civ

@@ -108,12 +108,12 @@ def world_stats(world,i, c):
     return stats_dict
 
 def simulate():
-    N = 500
+    N = 100
     c = civs(N)
-    num_civs = int(np.random.random() * 500) + 2
+    num_civs = int(np.random.random() * 300) + 2
     c.init_rand_civs(num_civs)
     world = create_world(N)
-    rand_populate_world(world,c.num_civs, int(np.ceil(500.0/num_civs)),0.5)
+    rand_populate_world(world,c.num_civs, int(np.ceil(300.0/num_civs)),0.8)
     for i in range(1000000):
         move_world(world,c)
         print "Year " + str(i)
